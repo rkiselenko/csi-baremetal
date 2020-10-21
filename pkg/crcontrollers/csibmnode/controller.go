@@ -20,6 +20,7 @@ import (
 	"context"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -61,7 +62,7 @@ type nodesCache struct {
 func (nc *nodesCache) getK8sNodeName(bmNodeName string) (string, bool) {
 	nc.RLock()
 	res, ok := nc.bmToK8sNode[bmNodeName]
-	nc.Unlock()
+	nc.RUnlock()
 
 	return res, ok
 }
@@ -69,7 +70,7 @@ func (nc *nodesCache) getK8sNodeName(bmNodeName string) (string, bool) {
 func (nc *nodesCache) getCSIBMNodeName(k8sNodeName string) (string, bool) {
 	nc.RLock()
 	res, ok := nc.k8sToBMNode[k8sNodeName]
-	nc.Unlock()
+	nc.RUnlock()
 
 	return res, ok
 }
@@ -121,7 +122,9 @@ func (bmc *Controller) SetupWithManager(m ctrl.Manager) error {
 
 				shouldReconcile := !reflect.DeepEqual(nodeOld.GetAnnotations(), nodeNew.GetAnnotations()) ||
 					!reflect.DeepEqual(nodeOld.Status.Addresses, nodeNew.Status.Addresses)
-				bmc.log.Debugf("UpdateEvent for k8s node %s. Trigger reconcile - %v.", nodeOld.Name, shouldReconcile)
+				if shouldReconcile {
+					bmc.log.Debugf("UpdateEvent for k8s node %s. Trigger reconcile.", nodeOld.Name)
+				}
 
 				return shouldReconcile
 			},
@@ -136,6 +139,8 @@ func (bmc *Controller) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		"method": "Reconcile",
 		"name":   req.Name,
 	})
+
+	ll.Infof("Processing")
 
 	var err error
 	// try to read CSIBMNode
@@ -249,7 +254,8 @@ func (h *k8sNodeEventHandler) createFunc(e event.CreateEvent, q workqueue.RateLi
 		"name":   e.Meta.GetName(),
 	})
 
-	ll.Info("Processing")
+	ll.Infof("Processing, queue size is %d", q.Len())
+	time.Sleep(2 * time.Second)
 
 	node, ok := e.Object.(*coreV1.Node)
 	if !ok {
@@ -261,7 +267,7 @@ func (h *k8sNodeEventHandler) createFunc(e event.CreateEvent, q workqueue.RateLi
 	bmNodeName, ok := h.cache.getCSIBMNodeName(e.Meta.GetName())
 	ll.Infof("Got value - %s, ok - %v", bmNodeName, ok)
 	if ok {
-		ll.Infof("Put in queue event for CSIBMNode %s", bmNodeName)
+		ll.Infof("1. Put in queue CSIBMNode %s, k8s node is %s", bmNodeName, e.Meta.GetName())
 		q.Add(bmNodeName)
 		return
 	}
@@ -269,17 +275,17 @@ func (h *k8sNodeEventHandler) createFunc(e event.CreateEvent, q workqueue.RateLi
 	bmNodes := &nodecrd.CSIBMNodeList{}
 	if err := h.k8sClient.List(context.Background(), bmNodes); err != nil {
 		ll.Errorf("Unable to read bmNodes list: %v", err)
-		q.Add(e.Meta.GetName())
+		q.AddRateLimited(e.Meta.GetName())
 		return
 	}
 	ll.Infof("Read %d CSIBMNodes", len(bmNodes.Items))
 
 	for _, bmNode := range bmNodes.Items {
-		ll.Debugf("compare with CSIBMNode %s", bmNode.Name)
 		if len(node.Status.Addresses) == matchedAddressesCount(&bmNode, node) {
 			enqueueForKey := "default/" + bmNode.Name
 			ll.Infof("CSIBMNode %s is corresponds to k8s node %s. Add it to queue and in cache.", enqueueForKey, e.Meta.GetName())
 			h.cache.put(e.Meta.GetName(), bmNode.Name)
+			ll.Infof("2. Put in queue CSIBMNode %s, k8s node is", bmNodeName, e.Meta.GetName())
 			q.Add(enqueueForKey)
 		}
 	}
@@ -293,7 +299,7 @@ func (h *k8sNodeEventHandler) createFunc(e event.CreateEvent, q workqueue.RateLi
 
 	if err := h.k8sClient.CreateCR(context.Background(), bmNodeName, bmNode); err != nil {
 		ll.Errorf("Unable to create CSIBMNode CR %s: %v. Requeue for k8s node", bmNodeName, err)
-		q.Add(e.Meta.GetName())
+		q.AddRateLimited(e.Meta.GetName())
 		return
 	}
 	h.cache.put(e.Meta.GetName(), bmNode.Name)
@@ -305,7 +311,7 @@ func (h *k8sNodeEventHandler) updateFunc(e event.UpdateEvent, q workqueue.RateLi
 		"name":   e.MetaOld.GetName(),
 	})
 
-	ll.Info("Processing")
+	ll.Infof("Processing, queue size is %d", q.Len())
 
 	k8sNode, ok := e.ObjectNew.(*coreV1.Node)
 	if !ok {
@@ -317,7 +323,7 @@ func (h *k8sNodeEventHandler) updateFunc(e event.UpdateEvent, q workqueue.RateLi
 	bmNodeName, ok := h.cache.getCSIBMNodeName(e.MetaOld.GetName())
 	ll.Infof("Got value - %s, ok - %v", bmNodeName, ok)
 	if ok {
-		ll.Infof("Put in queue event for CSIBMNode %s", bmNodeName)
+		ll.Infof("3. Put in queue event for CSIBMNode %s", bmNodeName)
 		q.Add(bmNodeName)
 		return
 	}
@@ -325,7 +331,7 @@ func (h *k8sNodeEventHandler) updateFunc(e event.UpdateEvent, q workqueue.RateLi
 	bmNodes := &nodecrd.CSIBMNodeList{}
 	if err := h.k8sClient.List(context.Background(), bmNodes); err != nil {
 		ll.Errorf("Unable to read bmNodes list: %v", err)
-		q.Add(e.MetaOld.GetName())
+		q.AddRateLimited(e.MetaOld.GetName())
 		return
 	}
 	ll.Infof("Read %d CSIBMNodes", len(bmNodes.Items))
@@ -334,6 +340,7 @@ func (h *k8sNodeEventHandler) updateFunc(e event.UpdateEvent, q workqueue.RateLi
 		if len(k8sNode.Status.Addresses) == matchedAddressesCount(&bmNode, k8sNode) {
 			enqueueForKey := "default/" + bmNode.Name
 			ll.Infof("CSIBMNode %s is corresponds to k8s node %s. Add to it to queue.", enqueueForKey, e.MetaOld.GetName())
+			ll.Infof("4. Put in queue event for CSIBMNode %s", bmNodeName)
 			q.Add(enqueueForKey)
 		}
 	}
