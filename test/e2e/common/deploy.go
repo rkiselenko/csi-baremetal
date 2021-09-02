@@ -143,9 +143,11 @@ func DeployCSI(f *framework.Framework, additionalInstallArgs string) (func(), er
 	}
 
 	cleanup := func() {
+		framework.Logf("Uninstall CSI Barematal")
 		if BMDriverTestContext.CompleteUninstall {
 			CleanupLoopbackDevices(f)
 			// delete resources with finalizers and wait until node- and lvgcontroller reconcile requests
+			GetExecutor().RunCmd("kubectl describe no | grep nodes.csi-baremetal.dell.com/uuid")
 			removeCRs(f, CsibmnodeGVR, LVGGVR)
 			deadline := time.Now().Add(30 * time.Second)
 			for {
@@ -159,11 +161,13 @@ func DeployCSI(f *framework.Framework, additionalInstallArgs string) (func(), er
 					break
 				}
 			}
+			GetExecutor().RunCmd("kubectl describe no | grep nodes.csi-baremetal.dell.com/uuid")
 		}
 
 		if err := helmExecutor.DeleteRelease(&chart); err != nil {
 			e2elog.Logf("CSI Deployment helm chart deletion failed. Name: %s, namespace: %s", chart.name, chart.namespace)
 		}
+		GetExecutor().RunCmd("kubectl describe no | grep nodes.csi-baremetal.dell.com/uuid")
 
 		if BMDriverTestContext.CompleteUninstall {
 			// delete resources without finalizers
@@ -171,6 +175,7 @@ func DeployCSI(f *framework.Framework, additionalInstallArgs string) (func(), er
 		}
 
 		printCRs(f, VolumeGVR, CsibmnodeGVR, ACGVR, ACRGVR, LVGGVR, DriveGVR)
+		GetExecutor().RunCmd("kubectl describe no | grep nodes.csi-baremetal.dell.com/uuid")
 	}
 
 	if err := helmExecutor.InstallRelease(&chart, installArgs); err != nil {
