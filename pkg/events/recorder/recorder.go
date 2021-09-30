@@ -65,7 +65,7 @@ func (sr *SimpleRecorder) makeEvent(ref *v1.ObjectReference, labels map[string]s
 		now = *sr.fixedTime
 	}
 	t := metav1.NewTime(now)
-	namespace := ref.Namespace
+	namespace := metav1.NamespaceDefault
 	if namespace == "" {
 		namespace = metav1.NamespaceDefault
 	}
