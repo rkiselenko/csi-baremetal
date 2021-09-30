@@ -90,7 +90,7 @@ func TestSimpleRecorder_Eventf(t *testing.T) {
 			expectedEvent: &v1.Event{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("foo.%x", fixedtime.UnixNano()),
-					Namespace: "baz",
+					Namespace: "default",
 				},
 				InvolvedObject: v1.ObjectReference{
 					Kind:       "Pod",
