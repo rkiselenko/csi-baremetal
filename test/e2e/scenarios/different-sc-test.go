@@ -133,6 +133,7 @@ func differentSCTypesTest(driver *baremetalDriver) {
 	})
 
 	ginkgo.It("should create Pod with PVC with ANY type", func() {
+		ginkgo.Fail("TEST FAIL")
 		scType := "ANY"
 		init(scType)
 		defer cleanup()
