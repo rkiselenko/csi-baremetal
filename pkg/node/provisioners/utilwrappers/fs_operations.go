@@ -97,7 +97,10 @@ func (fsOp *FSOperationsImpl) PrepareAndPerformMount(src, dst string, bindMount,
 	var opts string
 	if bindMount {
 		opts = fs.BindOption
+	} else {
+		opts = "-o noatime"
 	}
+
 	if err := fsOp.Mount(src, dst, opts); err != nil {
 		if wasCreated {
 			_ = fsOp.RmDir(dst)
