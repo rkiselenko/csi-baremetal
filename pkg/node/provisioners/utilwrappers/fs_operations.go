@@ -149,7 +149,11 @@ func (fsOp *FSOperationsImpl) UnmountWithCheck(path string) error {
 		return nil
 	}
 
-	return fsOp.Unmount(path)
+	if err = fsOp.Unmount(path); err != nil {
+		return err
+	}
+
+	return fsOp.RmDir(path)
 }
 
 // MountFakeTmpfs does attach of temp folder in read only mode

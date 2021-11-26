@@ -134,6 +134,7 @@ func TestFSOperationsImpl_MountWithCheck_Success(t *testing.T) {
 	// Unmount successfully
 	wrapFS.On("IsMounted", path).Return(true, nil).Once()
 	wrapFS.On("Unmount", path).Return(nil).Once()
+	wrapFS.On("RmDir", path).Return(nil).Once()
 	err = fsOps.UnmountWithCheck(path)
 	assert.Nil(t, err)
 	unmountCalled := false
