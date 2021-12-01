@@ -75,6 +75,7 @@ LDFLAGS := -ldflags "-X ${METRICS_PACKAGE}.Revision=${RELEASE_STR} -X ${METRICS_
 KIND_DIR := test/kind
 KIND     := ${KIND_DIR}/kind
 KIND_VER := 0.8.1
+KIND_NODE_VER := v1.19.11
 
 ### ci vars
 # timeout for short test suite, must be parsable as Go time.Duration (60m, 2h)
