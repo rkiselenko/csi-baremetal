@@ -165,7 +165,7 @@ jobs:
       with:
         files: test/e2e/reports/report.xml
 
-    # - name: Archive artifacts
+    # - name: Archive logs
     #   uses: papeloto/action-zip@v1
     #   with:
     #     files: test/e2e/reports
