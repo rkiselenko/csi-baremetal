@@ -161,13 +161,14 @@ jobs:
 
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
       with:
         files: test/e2e/reports/report.xml
 
     - name: Archive artifacts
       uses: papeloto/action-zip@v1
       with:
-        files: test/e2e/reports/
+        files: test/e2e/reports
         dest: reports.zip
 
     - name: Upload report to artifacts
