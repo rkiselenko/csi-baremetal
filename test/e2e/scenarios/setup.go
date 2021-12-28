@@ -41,7 +41,7 @@ var (
 		testsuites.InitVolumeIOTestSuite,
 		testsuites.InitEphemeralTestSuite,
 		testsuites.InitProvisioningTestSuite,
-		testsuites.InitMultiVolumeTestSuite,
+		// testsuites.InitMultiVolumeTestSuite,
 		testsuites.InitVolumeModeTestSuite,
 	}
 
