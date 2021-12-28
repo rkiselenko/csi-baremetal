@@ -1,9 +1,6 @@
 name: e2e
 
 on:
-  pull_request:
-    branches:
-      - master
   push:
     branches: [ master ]
   issue_comment:
@@ -179,8 +176,9 @@ jobs:
       run: make test-short-ci CSI_VERSION=$CSI_VERSION OPERATOR_VERSION=$CSI_OPERATOR_VERSION CHARTS_DIR=${{env.CSI_BAREMETAL_OPERATOR_DIR}}/charts
 
     - name: Publish Unit Test Results
+      if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/ci')
       uses: EnricoMi/publish-unit-test-result-action@v1
-      if: always()
+      commit: '${{ steps.sha.outputs.result }}' 
       with:
         files: test/e2e/reports/report.xml
 
