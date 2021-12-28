@@ -181,6 +181,9 @@ jobs:
       with:
         commit: '${{ steps.sha.outputs.result }}' 
         files: test/e2e/reports/report.xml
+        hide_comments: off
+        check_run_annotations: all tests
+        comment_mode: create new
 
     # - name: Archive logs
     #   uses: papeloto/action-zip@v1
