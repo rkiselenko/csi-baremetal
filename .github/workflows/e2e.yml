@@ -180,7 +180,9 @@ jobs:
 
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
-      if: always()
+      if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/ci')
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      commit: '${{ steps.sha.outputs.result }}' 
       with:
         files: test/e2e/reports/report.xml
 
