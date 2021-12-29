@@ -185,6 +185,7 @@ jobs:
       if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/ci')
       uses: EnricoMi/publish-unit-test-result-action@v1
       with:
+        check_name: "E2E Test Results"
         commit: '${{ steps.sha.outputs.result }}' 
         files: test/e2e/reports/report.xml
         hide_comments: off
